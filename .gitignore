@@ -1,0 +1,17 @@
+venv/
+__pycache__/
+*.pyc
+
+Projeto01/
+output/
+clipfusion_backup_before_flatten/
+clipfusion.old/
+clipfusion_backup_20260309-1748/
+
+*.mp4
+*.mkv
+*.mov
+*.avi
+*.webm
+*.wav
+*.mp3
