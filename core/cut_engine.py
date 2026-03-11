@@ -52,8 +52,9 @@ def render_cut(video_path: str, cut: dict, segments: list,
     def log(m):
         if progress_cb: progress_cb(m)
 
-    start     = cut["start"]
-    end       = cut["end"]
+    # FIX: Aceita tanto 'start'/'end' quanto 'start_time'/'end_time'
+    start     = cut.get("start", cut.get("start_time", 0))
+    end       = cut.get("end", cut.get("end_time", 0))
     duration  = end - start
     idx       = cut.get("cut_index", 0)
     platforms = cut.get("platforms", ["tiktok", "reels", "shorts"])
@@ -106,7 +107,7 @@ def render_cut(video_path: str, cut: dict, segments: list,
                     "-r", str(cfg["fps"]), "-movflags", "+faststart",
                     "-map_metadata", "-1", raw_out,
                 ]
-                r = subprocess.run(cmd, capture_output=True, text=True)
+                r = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
                 ok = r.returncode == 0
 
                 if ok and srt_content.strip():
@@ -120,7 +121,7 @@ def render_cut(video_path: str, cut: dict, segments: list,
                         "-c:a", "copy", "-r", str(cfg["fps"]), "-pix_fmt", "yuv420p",
                         sub2,
                     ]
-                    r2 = subprocess.run(cmd2, capture_output=True, text=True)
+                    r2 = subprocess.run(cmd2, capture_output=True, text=True, timeout=300)
                     if r2.returncode == 0:
                         raw_out = sub2
 
@@ -142,7 +143,7 @@ def render_cut(video_path: str, cut: dict, segments: list,
                     "-r", str(cfg["fps"]), "-pix_fmt", "yuv420p",
                     "-movflags", "+faststart", "-map_metadata", "-1", raw_out,
                 ]
-                r = subprocess.run(cmd, capture_output=True, text=True)
+                r = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
                 if r.returncode != 0:
                     log(f"  ❌ Render falhou: {r.stderr[-100:]}")
                     continue
@@ -180,5 +181,5 @@ def render_all(video_path: str, cuts: list, segments: list,
         paths = render_cut(video_path, cut, segments, output_dir,
                            project_id, ace_level, use_vaapi, progress_cb)
         results[cut.get("id", cut.get("cut_index", i))] = paths
-        gc.collect()  # DO CAMPEÃO: GC explícito entre cortes (8GB RAM)
+        gc.collect()  # GC explícito entre cortes (8GB RAM)
     return results
