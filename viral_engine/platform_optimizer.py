@@ -7,7 +7,6 @@ PLATFORM_SPECS = {
     "kwai":      {"max_hook_chars": 100, "max_duration": 60,  "ideal": (15,60),  "label": "Kwai"},
 }
 
-
 class PlatformOptimizer:
     @staticmethod
     def optimize(hook: str, platform: str) -> str:

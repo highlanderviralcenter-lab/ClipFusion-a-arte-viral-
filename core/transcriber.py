@@ -1,5 +1,5 @@
-"""Core — Transcrição Whisper via Python API (mais rápido que CLI subprocess)."""
-import os, tempfile, shutil, subprocess
+"""Core — Transcrição Whisper via Python API."""
+import os, tempfile, shutil, subprocess, gc
 
 
 def fmt_time(s: float) -> str:
@@ -7,10 +7,8 @@ def fmt_time(s: float) -> str:
 
 
 class WhisperTranscriber:
-    """Transcrição otimizada para 8GB RAM — usa Python API, não CLI."""
-
     def __init__(self, model: str = "tiny", language: str = "pt"):
-        self.model    = model
+        self.model = model
         self.language = language
         try:
             import whisper
@@ -25,37 +23,26 @@ class WhisperTranscriber:
 
         tmp_dir  = tempfile.mkdtemp()
         wav_path = os.path.join(tmp_dir, "audio.wav")
-
         try:
             log("🔊 Extraindo áudio (16kHz mono)...")
             r = subprocess.run([
                 'ffmpeg', '-y', '-i', video_path,
-                '-vn', '-acodec', 'pcm_s16le',
-                '-ar', '16000', '-ac', '1', wav_path
+                '-vn', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1', wav_path
             ], capture_output=True, text=True)
             if r.returncode != 0:
                 raise RuntimeError(f"FFmpeg erro: {r.stderr[-200:]}")
 
             log(f"🧠 Transcrevendo com Whisper '{self.model}'...")
-            # Python API: mais rápido e sem overhead de subprocess
             model = self._whisper.load_model(self.model, device="cpu")
             result = model.transcribe(
-                wav_path,
-                language=self.language,
-                fp16=False,                      # Intel HD 520 não tem FP16
-                condition_on_previous_text=True,
-                verbose=False,
-                no_speech_threshold=0.6,         # Pula silêncios
-                logprob_threshold=-1.0,
+                wav_path, language=self.language, fp16=False,
+                condition_on_previous_text=True, verbose=False,
+                no_speech_threshold=0.6, logprob_threshold=-1.0,
             )
-
-            # Libera modelo da RAM imediatamente
-            del model
-            import gc; gc.collect()
+            del model; gc.collect()
 
             segments = [
-                {'start': round(s['start'], 2),
-                 'end':   round(s['end'],   2),
+                {'start': round(s['start'], 2), 'end': round(s['end'], 2),
                  'text':  s['text'].strip()}
                 for s in result.get('segments', [])
             ]
@@ -69,7 +56,6 @@ class WhisperTranscriber:
             shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
-# Função de conveniência (mantém compatibilidade com imports existentes)
 def transcribe(video_path: str, model: str = "tiny",
                language: str = "pt", progress_cb=None) -> dict:
     return WhisperTranscriber(model, language).transcribe(video_path, progress_cb)

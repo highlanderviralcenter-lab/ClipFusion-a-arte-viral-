@@ -72,7 +72,6 @@ class AntiCopyrightEngine:
         if self.config.level == ProtectionLevel.NONE:
             shutil.copy2(input_path, output_path)
             return self.report
-
         tmp = tempfile.mkdtemp()
         try:
             current = input_path
@@ -81,19 +80,16 @@ class AntiCopyrightEngine:
                 out1 = os.path.join(tmp, "v1.mp4")
                 self._run_vf(current, out1, vf)
                 current = out1
-
             if self.config.audio_basic or self.config.audio_advanced:
                 out2 = os.path.join(tmp, "v2.mp4")
                 from anti_copy_modules.audio_advanced import AudioProcessor
                 ok = AudioProcessor(self.seed).process(
                     current, out2,
-                    basic=self.config.audio_basic,
-                    advanced=self.config.audio_advanced,
+                    basic=self.config.audio_basic, advanced=self.config.audio_advanced,
                     log=self.log)
                 if ok:
                     current = out2
                     self.report["techniques_applied"].append("audio")
-
             if self.config.metadata:
                 out3 = os.path.join(tmp, "v3.mp4")
                 from anti_copy_modules.fingerprint_evasion import FingerprintEvasion
@@ -105,7 +101,6 @@ class AntiCopyrightEngine:
                 if r.returncode == 0:
                     current = out3
                     self.report["techniques_applied"].append("metadata")
-
             shutil.copy2(current, output_path)
             self.log(f"ACE ✅ {len(self.report['techniques_applied'])} técnicas [{self.config.level.value}]")
         except Exception as e:
@@ -119,7 +114,6 @@ class AntiCopyrightEngine:
         filters = []
         is_max  = self.config.level == ProtectionLevel.MAXIMUM
         is_anti = self.config.level in (ProtectionLevel.ANTI_AI, ProtectionLevel.MAXIMUM)
-
         if self.config.geometric:
             from anti_copy_modules.geometric_transforms import GeometricTransforms
             filters += GeometricTransforms(self.seed).ffmpeg_filters(is_anti, is_max)

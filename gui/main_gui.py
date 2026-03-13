@@ -90,6 +90,7 @@ class ClipFusionApp:
         self._tab_render()
         self._tab_historico()
         self._tab_agenda()
+        self._tab_analytics()
 
     # ── Tab 1: Projeto ────────────────────────────────────────────────────────
 
@@ -586,6 +587,29 @@ class ClipFusionApp:
                     db.update_cut_output(cut_id, paths)
 
                 db.update_project_status(self.project_id, "concluido")
+
+                # Analytics: registra cada corte renderizado
+                try:
+                    from analytics_engine import AnalyticsEngine
+                    ae = AnalyticsEngine()
+                    for cut in approved:
+                        for platform in cut.get("platforms", ["tiktok"]):
+                            ae.record_performance(
+                                cut_id=f"{pid}_{cut.get('cut_index', 0)}",
+                                platform=platform,
+                                metrics={
+                                    "views": 0,
+                                    "video_duration": cut.get("end", 0) - cut.get("start", cut.get("start_time", 0)),
+                                    "archetype": cut.get("archetype", ""),
+                                    "hook_text": cut.get("hook", ""),
+                                    "title": cut.get("title", ""),
+                                    "nicho": "geral",
+                                    "posted_at": datetime.now().isoformat(),
+                                }
+                            )
+                    self.root.after(0, lambda: self._log("📊 Analytics: cortes registrados."))
+                except Exception:
+                    pass
                 self._save_state({
                     "stage": "render_done",
                     "status": "ok",
@@ -683,6 +707,72 @@ class ClipFusionApp:
             self.tree.delete(r)
         for p in db.list_projects():
             self.tree.insert("", "end", values=(p["id"], p["name"], p["status"], p["created_at"]))
+
+    # ── Tab 8: Analytics ──────────────────────────────────────────────────────
+
+    def _tab_analytics(self):
+        f = tk.Frame(self.nb, bg=BG2); self.nb.add(f, text="📊  Analytics")
+        top = tk.Frame(f, bg=BG2); top.pack(fill="x", padx=30, pady=(20,4))
+        self._lbl(top, "Analytics & Aprendizado", font=FNTL).pack(side="left")
+        self._btn(top, "🔄 Atualizar", self._refresh_analytics, ACC).pack(side="right")
+
+        self._lbl(f, "Performance dos cortes, padrões aprendidos e sugestões do sistema.",
+                  color=GRY).pack(anchor="w", padx=30)
+        self._sep(f)
+
+        # Campos para registrar performance manualmente
+        reg = tk.Frame(f, bg=BG2); reg.pack(fill="x", padx=30, pady=4)
+        self._lbl(reg, "Registrar resultado real:").pack(side="left")
+
+        self.v_ana_cut   = tk.StringVar(value="cut_id")
+        self.v_ana_plat  = tk.StringVar(value="tiktok")
+        self.v_ana_views = tk.StringVar(value="0")
+
+        tk.Entry(reg, textvariable=self.v_ana_cut,  width=14, bg=BG3, fg=WHT,
+                 insertbackground=WHT, relief="flat", font=FNT).pack(side="left", padx=4)
+        for p in ["tiktok", "reels", "shorts"]:
+            tk.Radiobutton(reg, text=p, variable=self.v_ana_plat, value=p,
+                           bg=BG2, fg=WHT, selectcolor=ACC,
+                           activebackground=BG2, font=FNT).pack(side="left", padx=4)
+        self._lbl(reg, "Views:").pack(side="left", padx=(8,2))
+        tk.Entry(reg, textvariable=self.v_ana_views, width=8, bg=BG3, fg=WHT,
+                 insertbackground=WHT, relief="flat", font=FNT).pack(side="left", padx=4)
+        self._btn(reg, "✅ Registrar", self._record_manual_analytics, GRN).pack(side="left", padx=8)
+
+        self._sep(f)
+
+        self.box_analytics = scrolledtext.ScrolledText(
+            f, bg=BG3, fg=GRN, font=MONO, relief="flat", insertbackground=WHT)
+        self.box_analytics.pack(fill="both", expand=True, padx=30, pady=(0,20))
+        self.box_analytics.insert("1.0",
+            "Clique em 🔄 Atualizar para ver o dashboard.\n"
+            "Após renderizar e postar, registre os views reais aqui.\n"
+            "O sistema aprende os padrões e sugere melhorias automaticamente.\n")
+
+    def _refresh_analytics(self):
+        try:
+            from analytics_engine import AnalyticsEngine
+            ae = AnalyticsEngine()
+            report = ae.generate_report(console=True)
+            self.box_analytics.delete("1.0", "end")
+            self.box_analytics.insert("1.0", report)
+        except Exception as e:
+            self.box_analytics.delete("1.0", "end")
+            self.box_analytics.insert("1.0", f"Erro ao carregar analytics: {e}\n"
+                                             f"Verifique se analytics_engine.py está em ~/clipfusion/")
+
+    def _record_manual_analytics(self):
+        try:
+            from analytics_engine import AnalyticsEngine
+            ae = AnalyticsEngine()
+            ae.record_performance(
+                cut_id=self.v_ana_cut.get().strip(),
+                platform=self.v_ana_plat.get(),
+                metrics={"views": int(self.v_ana_views.get())}
+            )
+            self._refresh_analytics()
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao registrar: {e}")
 
     # ── Helpers UI ────────────────────────────────────────────────────────────
 

@@ -1,11 +1,8 @@
 """Utils — Detecção de hardware otimizada para i5-6200U + Intel HD 520."""
-import subprocess
-import os
+import subprocess, os
 
 
 class HardwareDetector:
-    """Detecta e configura hardware automaticamente."""
-
     def __init__(self):
         self.info = self._detect_all()
 
@@ -37,8 +34,7 @@ class HardwareDetector:
         try:
             r = subprocess.run(['lspci'], capture_output=True, text=True)
             if 'HD Graphics 520' in r.stdout or 'UHD' in r.stdout:
-                gpu_info['intel'] = True
-                gpu_info['driver'] = 'i915'
+                gpu_info['intel'] = True; gpu_info['driver'] = 'i915'
         except: pass
         try:
             r = subprocess.run(['lsmod'], capture_output=True, text=True)
@@ -58,7 +54,8 @@ class HardwareDetector:
 
     def _detect_encoder(self) -> str:
         try:
-            r = subprocess.run(['vainfo'], capture_output=True, text=True)
+            env = dict(os.environ); env.setdefault('LIBVA_DRIVER_NAME', 'iHD')
+            r = subprocess.run(['vainfo'], env=env, capture_output=True, text=True)
             if 'VAEntrypointEncSlice' in r.stdout:
                 return 'h264_vaapi'
         except: pass
@@ -66,11 +63,13 @@ class HardwareDetector:
 
     def _check_vaapi(self) -> dict:
         try:
-            r = subprocess.run(['vainfo'], capture_output=True, text=True)
+            env = dict(os.environ); env.setdefault('LIBVA_DRIVER_NAME', 'iHD')
+            r = subprocess.run(['vainfo'], env=env, capture_output=True, text=True)
+            out = r.stdout + r.stderr
             return {
-                'disponivel':  'VAEntrypointEncSlice' in r.stdout,
-                'driver':      'iHD' if 'iHD' in r.stdout else 'i965',
-                'encode_h264': 'VAEntrypointEncSlice' in r.stdout,
+                'disponivel':  'VAEntrypointEncSlice' in out,
+                'driver':      'iHD' if 'iHD' in out else 'i965',
+                'encode_h264': 'VAEntrypointEncSlice' in out,
             }
         except:
             return {'disponivel': False, 'driver': 'none', 'encode_h264': False}
@@ -79,8 +78,7 @@ class HardwareDetector:
         return 'h264_vaapi' if self.info['vaapi']['disponivel'] else 'libx264'
 
     def get_status_string(self) -> str:
-        """Retorna string de status para a GUI."""
-        enc   = self.get_encoder()
+        enc = self.get_encoder()
         vaapi = '✅ VA-API' if enc == 'h264_vaapi' else '⚠️ CPU'
         try:
             r = subprocess.run(['sensors'], capture_output=True, text=True)
@@ -105,10 +103,8 @@ class HardwareDetector:
 
 
 def check_system() -> bool:
-    """Verifica se o sistema está otimizado para ClipFusion."""
     print("\n🔍 Verificando Debian Tunado 3.0...")
     checks = []
-
     try:
         with open('/proc/cmdline') as f:
             cmdline = f.read()
@@ -116,32 +112,27 @@ def check_system() -> bool:
         checks.append(('mitigations=off',   'mitigations=off'   in cmdline))
     except:
         checks.extend([('i915.enable_guc=3', False), ('mitigations=off', False)])
-
     try:
         r = subprocess.run(['swapon', '--show'], capture_output=True, text=True)
         checks.append(('ZRAM ativo', 'zram' in r.stdout))
     except:
         checks.append(('ZRAM ativo', False))
-
     try:
         r = subprocess.run(['lsmod'], capture_output=True, text=True)
         checks.append(('NVIDIA bloqueada', 'nvidia' not in r.stdout and 'nouveau' not in r.stdout))
     except:
         checks.append(('NVIDIA bloqueada', False))
-
     try:
-        r = subprocess.run(['vainfo'], capture_output=True, text=True)
-        checks.append(('VA-API iHD', 'VAEntrypointEncSlice' in r.stdout))
+        env = dict(os.environ); env.setdefault('LIBVA_DRIVER_NAME', 'iHD')
+        r = subprocess.run(['vainfo'], env=env, capture_output=True, text=True)
+        checks.append(('VA-API iHD', 'VAEntrypointEncSlice' in (r.stdout + r.stderr)))
     except:
         checks.append(('VA-API iHD', False))
-
     for check, status in checks:
         print(f"  {'✅' if status else '❌'} {check}")
-
     ok = all(s for _, s in checks)
     print("\n✅ Sistema pronto!\n" if ok else "\n⚠️  Algumas otimizações ausentes.\n")
     return ok
-
 
 if __name__ == '__main__':
     hw = HardwareDetector()

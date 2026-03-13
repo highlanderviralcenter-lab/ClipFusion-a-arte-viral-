@@ -2,7 +2,6 @@
 import random, hashlib
 from datetime import datetime, timedelta
 
-
 class FingerprintEvasion:
     def __init__(self, seed: int):
         self.rng = random.Random(seed)

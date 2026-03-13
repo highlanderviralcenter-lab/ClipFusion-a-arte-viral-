@@ -1,7 +1,6 @@
 """ClipFusion — Geometric: zoom 1–3%, micro-rotação, perspectiva."""
 import random
 
-
 class GeometricTransforms:
     def __init__(self, seed: int):
         self.rng = random.Random(seed)

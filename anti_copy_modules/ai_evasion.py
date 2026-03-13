@@ -1,7 +1,6 @@
 """ClipFusion — AI Evasion. Perturba embeddings CNN e motion vectors."""
 import random
 
-
 class AIEvasion:
     def __init__(self, seed: int):
         self.rng = random.Random(seed)

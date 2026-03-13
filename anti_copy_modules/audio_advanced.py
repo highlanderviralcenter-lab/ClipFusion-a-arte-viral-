@@ -1,7 +1,6 @@
 """ClipFusion — Audio: pitch ±0.05st + time stretch ±0.3% + EQ + reverb."""
 import random, subprocess, shutil
 
-
 class AudioProcessor:
     def __init__(self, seed: int):
         self.rng = random.Random(seed)
@@ -12,7 +11,7 @@ class AudioProcessor:
         if basic:
             semitones  = self.rng.uniform(-0.05, 0.05)
             shifted_sr = int(44100 * (2 ** (semitones / 12)))
-            af += [f"asetrate={shifted_sr}", f"aresample=44100",
+            af += [f"asetrate={shifted_sr}", "aresample=44100",
                    f"atempo={self.rng.uniform(0.997, 1.003):.5f}"]
         if advanced:
             for freq in self.rng.sample([200, 500, 1000, 3000, 6000, 10000], 3):

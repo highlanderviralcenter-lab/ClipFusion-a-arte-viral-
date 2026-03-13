@@ -4,13 +4,11 @@ from pathlib import Path
 
 DB_PATH = Path(os.path.expanduser("~")) / ".clipfusion" / "db.sqlite"
 
-
 def _conn():
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     c = sqlite3.connect(str(DB_PATH))
     c.row_factory = sqlite3.Row
     return c
-
 
 def init():
     c = _conn()
@@ -37,7 +35,6 @@ def init():
         );
     """)
     c.commit(); c.close()
-
 
 def create_project(name, video_path):
     c = _conn()
@@ -123,6 +120,5 @@ def update_cut_output(cut_id, paths):
         "UPDATE cuts SET output_paths=?,status='renderizado' WHERE id=?",
         (json.dumps(paths), cut_id))
     c.commit(); c.close()
-
 
 init()

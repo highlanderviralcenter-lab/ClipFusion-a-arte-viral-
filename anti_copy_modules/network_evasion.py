@@ -3,7 +3,6 @@ import random
 from datetime import datetime, timedelta
 from typing import List
 
-
 class NetworkEvasion:
     PLATFORM_CONFIGS = {
         "tiktok":    {"peak": [(7,9),(12,14),(19,22)], "interval": (4,8),   "max_day": 5},

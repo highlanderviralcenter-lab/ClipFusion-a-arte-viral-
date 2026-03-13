@@ -94,14 +94,15 @@ def render_cut(video_path: str, cut: dict, segments: list,
             ok      = False
 
             if vaapi_ok:
-                # PASSO 1: Corte + escala via VA-API (rápido, SEM legenda)
+                # PASSO 1: hwaccel_device ANTES do -i, sem hwaccel_output_format
                 cmd = [
                     "ffmpeg", "-y",
                     "-hwaccel", "vaapi",
                     "-hwaccel_device", "/dev/dri/renderD128",
-                    "-hwaccel_output_format", "vaapi",
                     "-ss", str(start), "-i", video_path, "-t", str(dur),
-                    "-vf", f"scale_vaapi={w}:{h}",
+                    "-vf", (f"scale={w}:{h}:force_original_aspect_ratio=decrease,"
+                            f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2:black,"
+                            f"format=nv12,hwupload,scale_vaapi={w}:{h}"),
                     "-c:v", "h264_vaapi",
                     "-c:a", "aac", "-b:a", cfg["abr"], "-ar", "44100",
                     "-r", str(cfg["fps"]), "-movflags", "+faststart",

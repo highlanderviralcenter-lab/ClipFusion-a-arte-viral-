@@ -1,6 +1,5 @@
 """ClipFusion — Secondary Group Strategy."""
 
-
 class SecondaryGroupStrategy:
     def dual_hook(self, hook: str, primary: str, secondary: dict) -> str:
         angle = secondary.get("angulo_gancho", "")
